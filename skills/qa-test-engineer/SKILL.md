@@ -1,58 +1,20 @@
 ---
 name: qa-test-engineer
-description: 测试开发工程师技能，负责设计和执行软件测试方案，包括单元测试、集成测试、端到端测试、性能测试等。当用户需求涉及测试、自动化测试、质量验证、Bug诊断、测试用例设计、前后端联调测试时触发此技能。
+description: 测试开发工程师技能，负责设计和执行软件测试方案。优先使用Playwright进行前端E2E测试，pytest进行后端API测试。
 ---
 
 # 测试开发工程师
 
-## 概述
+## 核心原则：Playwright 优先
 
-本技能提供专业的软件测试方法论和实践经验，帮助设计和执行全面的测试方案，确保软件质量。涵盖测试策略制定、测试用例设计、自动化测试实现、缺陷诊断与报告等全流程测试活动。
+**前端 E2E 测试首选 Playwright**，这是行业最佳实践。
 
-## 核心能力
-
-### 1. 测试策略制定
-
-根据项目特点制定合适的测试策略：
-
-- **单元测试**：针对函数/方法的独立测试
-- **集成测试**：验证模块间交互
-- **端到端测试**：模拟用户完整操作流程
-- **API测试**：验证接口正确性和稳定性
-- **性能测试**：评估系统响应时间和并发能力
-
-### 2. 测试用例设计
-
-设计全面的测试用例覆盖：
-
-- 正常流程（Happy Path）
-- 异常流程（Error Handling）
-- 边界条件（Boundary Cases）
-- 并发场景（Concurrency）
-- 安全场景（Security）
-
-### 3. 自动化测试实现
-
-提供自动化测试解决方案：
-
-- Python: pytest, unittest
-- JavaScript: Jest, Cypress, Playwright
-- API测试: requests, axios
-- 性能测试: locust, k6
-
-### 4. 前后端联调测试
-
-专门解决前后端联调验证问题：
-
-```
-测试链路: 前端操作 → 网络请求 → 后端处理 → 数据库 → 响应返回 → 前端展示
-```
-
-**诊断方法**：
-1. 前端日志分析（确认请求是否发出）
-2. 后端日志分析（确认请求是否到达）
-3. 数据库验证（确认数据是否正确写入）
-4. 响应验证（确认返回数据格式正确）
+| 测试类型 | 工具选择 | 原因 |
+|---------|---------|------|
+| 前端 E2E | **Playwright** | 自动等待、多浏览器、调试友好、CI/CD 友好 |
+| 组件单元 | Vue Test Utils | 官方推荐 |
+| 后端 API | pytest | 成熟稳定 |
+| 性能测试 | Playwright | 内置性能指标 |
 
 ## 工作流程
 
@@ -219,44 +181,39 @@ class TestUserAPI:
         assert response.status_code == 400
 ```
 
-### 端到端测试模板 (Uni-app)
+### 端到端测试模板 (Playwright)
 
 ```javascript
-// 测试页面: pages/test/e2e-test.vue
-export default {
-  data() {
-    return {
-      testResults: []
-    }
-  },
+// e2e/tests/auth.spec.js
+import { test, expect } from '@playwright/test';
+
+test('用户登录成功', async ({ page }) => {
+  await page.goto('/pages/login/login');
+  await page.fill('input[type="text"]', 'testuser');
+  await page.fill('input[type="password"]', 'password123');
+  await page.click('button[type="submit"]');
   
-  methods: {
-    // 拦截请求记录测试数据
-    interceptRequest() {
-      const original = uni.request
-      uni.request = (options) => {
-        this.recordTestStep('request', options)
-        return original({
-          ...options,
-          success: (res) => {
-            this.recordTestStep('response', res)
-            options.success && options.success(res)
-          }
-        })
-      }
-    },
-    
-    // 执行测试场景
-    async runTestScenario(scenario) {
-      // 1. 填充表单
-      this.fillForm(scenario.input)
-      
-      // 2. 触发操作
-      await this.triggerAction(scenario.action)
-      
-      // 3. 验证结果
-      return this.verifyResult(scenario.expected)
-    }
+  // 验证跳转
+  await expect(page).toHaveURL(/\/pages\/goals\/goals/);
+});
+```
+
+### Page Object 模板
+
+```javascript
+// e2e/pages/LoginPage.js
+export class LoginPage {
+  constructor(page) {
+    this.page = page;
+    this.usernameInput = page.locator('input[type="text"]');
+    this.passwordInput = page.locator('input[type="password"]');
+    this.submitButton = page.locator('button[type="submit"]');
+  }
+  
+  async login(username, password) {
+    await this.usernameInput.fill(username);
+    await this.passwordInput.fill(password);
+    await this.submitButton.click();
   }
 }
 ```
